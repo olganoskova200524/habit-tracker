@@ -48,7 +48,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOW_ALL_ORIGINS = env.bool("CORS_ALLOW_ALL_ORIGINS", default=True)
 
 ROOT_URLCONF = "config.urls"
 
@@ -137,3 +137,5 @@ CELERY_BEAT_SCHEDULE = {
         "schedule": crontab(minute="*"),
     },
 }
+
+DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
