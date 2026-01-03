@@ -14,9 +14,20 @@ def send_habits_reminders() -> int:
 
     sent = 0
     for habit in habits:
-        if (habit.time.hour, habit.time.minute) == current_hm:
-            text = f"Reminder: {habit.action} at {habit.place}"
-            send_telegram_message(int(habit.user.telegram_chat_id), text)
-            sent += 1
+        if (habit.time.hour, habit.time.minute) != current_hm:
+            continue
+
+        # Проверяем periodicity
+        if habit.last_reminder_sent_at is not None:
+            delta_days = (now.date() - habit.last_reminder_sent_at.date()).days
+            if delta_days < habit.periodicity:
+                continue
+
+        text = f"Reminder: {habit.action} at {habit.place}"
+        send_telegram_message(int(habit.user.telegram_chat_id), text)
+
+        habit.last_reminder_sent_at = now
+        habit.save(update_fields=["last_reminder_sent_at"])
+        sent += 1
 
     return sent

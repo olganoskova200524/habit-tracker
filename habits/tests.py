@@ -1,3 +1,7 @@
+from datetime import datetime, timedelta
+from unittest.mock import patch
+
+from django.utils import timezone
 from django.contrib.auth import get_user_model
 from rest_framework import status
 from rest_framework.test import APITestCase
@@ -247,3 +251,42 @@ class PublicHabitsTests(HabitBase):
         # должны быть только публичные
         for item in response.data["results"]:
             self.assertTrue(item["is_public"])
+
+
+class HabitPeriodicityRemindersTests(HabitBase):
+    @patch("habits.tasks.send_telegram_message")
+    @patch("habits.tasks.timezone.localtime")
+    def test_periodicity_prevents_sending_too_often(self, mock_localtime, mock_send):
+        """
+        Если periodicity=3, а напоминание уже отправлялось сегодня,
+        то повторно в тот же день не отправляем.
+        """
+        # фиксируем "сейчас"
+        now = timezone.make_aware(datetime(2026, 1, 2, 10, 0, 0))
+        mock_localtime.return_value = now
+
+        # у пользователя должен быть telegram_chat_id
+        self.user.telegram_chat_id = 123456789
+        self.user.save(update_fields=["telegram_chat_id"])
+
+        # привычка на то же время (10:00) и periodicity=3
+        Habit.objects.create(
+            user=self.user,
+            place="home",
+            time=now.time().replace(second=0, microsecond=0),
+            action="periodicity test",
+            is_pleasant=False,
+            periodicity=3,
+            reward="tea",
+            duration_seconds=60,
+            is_public=False,
+            # ключевой момент: уже отправляли сегодня
+            last_reminder_sent_at=now - timedelta(minutes=1),
+        )
+
+        from habits.tasks import send_habits_reminders
+
+        sent = send_habits_reminders()
+
+        self.assertEqual(sent, 0)
+        mock_send.assert_not_called()
