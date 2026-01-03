@@ -31,4 +31,8 @@ class TelegramChatIdSerializer(serializers.Serializer):
     def validate_telegram_chat_id(self, value: int) -> int:
         if value <= 0:
             raise serializers.ValidationError("telegram_chat_id must be positive")
+
+        user = self.context["request"].user
+        if User.objects.filter(telegram_chat_id=value).exclude(pk=user.pk).exists():
+            raise serializers.ValidationError("telegram_chat_id is already in use")
         return value

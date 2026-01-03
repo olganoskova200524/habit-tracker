@@ -34,3 +34,14 @@ class AuthTests(APITestCase):
 
         user.refresh_from_db()
         self.assertEqual(user.telegram_chat_id, 123456789)
+
+    def test_set_telegram_chat_id_must_be_unique(self):
+        user1 = User.objects.create_user(username="u1", password="StrongPass123!")
+        user2 = User.objects.create_user(username="u2", password="StrongPass123!")
+
+        user1.telegram_chat_id = 111
+        user1.save(update_fields=["telegram_chat_id"])
+
+        self.client.force_authenticate(user=user2)
+        resp = self.client.post("/api/users/telegram/", {"telegram_chat_id": 111}, format="json")
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)

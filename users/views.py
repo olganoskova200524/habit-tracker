@@ -20,7 +20,7 @@ class SetTelegramChatIdView(APIView):
         responses={200: TelegramChatIdSerializer},
     )
     def post(self, request):
-        serializer = self.serializer_class(data=request.data)
+        serializer = self.serializer_class(data=request.data, context={"request": request})
         serializer.is_valid(raise_exception=True)
 
         request.user.telegram_chat_id = serializer.validated_data["telegram_chat_id"]
